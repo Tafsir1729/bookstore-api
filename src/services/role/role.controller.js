@@ -1,10 +1,11 @@
 const { StatusCodes } = require("http-status-codes");
 const { response } = require("../../utils/response");
 const { Role } = require("./role.model");
+const { logger } = require("../../utils/logger");
 
 const create = async (req, res) => {
   const { name } = req.body;
-  if (!name)
+  if (!name) {
     return response(
       res,
       StatusCodes.BAD_REQUEST,
@@ -12,11 +13,13 @@ const create = async (req, res) => {
       null,
       "Role name is required!"
     );
+  }
+
   try {
     const duplicateRole = await Role.findOne({
       name: name,
     });
-    if (duplicateRole)
+    if (duplicateRole) {
       return response(
         res,
         StatusCodes.NOT_ACCEPTABLE,
@@ -24,10 +27,17 @@ const create = async (req, res) => {
         {},
         "Role already exists!"
       );
+    }
+
     const newRole = await Role.create({
       name: name,
     });
-    if (!newRole)
+    if (!newRole) {
+      logger.error(`Couldn't create role ${name}!`, {
+        service: "role",
+        controller: "role",
+        method: "create",
+      });
       return response(
         res,
         StatusCodes.FORBIDDEN,
@@ -35,8 +45,14 @@ const create = async (req, res) => {
         {},
         "Couldn't create role!"
       );
+    }
     return response(res, StatusCodes.CREATED, true, { role: newRole }, null);
   } catch (error) {
+    logger.error(error.message, {
+      service: "role",
+      controller: "role",
+      method: "create",
+    });
     return response(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
