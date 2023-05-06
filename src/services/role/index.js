@@ -15,5 +15,5 @@ app.get("/", (req, res) => {
 var port = process.env.PORT || 5000;
 
 app.listen(port, () => {
-  console.log("Role service server is Running on " + port);
+  console.log("Role service is Running on " + port);
 });
