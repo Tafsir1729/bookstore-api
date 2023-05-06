@@ -34,6 +34,12 @@ const UserSchema = Schema(
     photoUrl: {
       type: String,
     },
+    otp: {
+      type: String,
+    },
+    otpExpiry: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
