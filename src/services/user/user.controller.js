@@ -169,8 +169,8 @@ const sendOTP = async (toEmail, otp, expires) => {
 };
 
 const verifyOTP = async (req, res) => {
+  const { email, otp } = req.body;
   try {
-    const { email, otp } = req.body;
     const user = await User.findOne({ email: email });
     if (user.opt === otp && user.otpExpiry >= new Date()) {
       return response(
@@ -186,6 +186,7 @@ const verifyOTP = async (req, res) => {
         controller: "user",
         method: "verifyOTP",
       });
+      await User.deleteOne({ email: email });
       return response(
         res,
         StatusCodes.BAD_REQUEST,
@@ -200,6 +201,7 @@ const verifyOTP = async (req, res) => {
       controller: "user",
       method: "verifyOTP",
     });
+    await User.deleteOne({ email: email });
     return response(
       res,
       StatusCodes.INTERNAL_SERVER_ERROR,
