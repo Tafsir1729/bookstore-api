@@ -6,11 +6,11 @@ const { logger } = require("../../utils/logger");
 const { BLOB_URL, BLOB_CONTAINER_NAME, BLOB_CONNECTION_STRING } = process.env;
 const { v4: uuidv4 } = require("uuid");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { sendEmail } = require("../../utils/nodeMailer");
+const { sendEmail } = require("../../utils/sendGrid");
 
 const register = async (req, res) => {
   try {
-    const { fullName, email, password, phone, gender, role, active } = req.body;
+    const { fullName, email, password, phone, gender, role } = req.body;
 
     const duplicateUser = await User.findOne({
       email: email,
@@ -25,8 +25,8 @@ const register = async (req, res) => {
       );
     }
 
-    //Upload file in azure blob storage
-    const { file } = req.files;
+    // Upload file in azure blob storage
+    const file = req.files?.photo;
     let blobResponse = await uploadToBlob(file);
 
     const hashedPassword = await hash(password, 9);
@@ -37,8 +37,8 @@ const register = async (req, res) => {
       phone: phone,
       gender: gender,
       role: role,
-      active: active,
-      photoUrl: blobResponse.data.blobUrl,
+      active: true,
+      photoUrl: blobResponse,
     });
     if (!newUser) {
       logger.error(`Couldn't create user ${email}!`, {
@@ -84,7 +84,8 @@ const register = async (req, res) => {
         "Couldn't send otp!"
       );
     }
-    return response(res, StatusCodes.CREATED, true, { user: newUser }, null);
+
+    return response(res, StatusCodes.CREATED, true, null, null);
   } catch (error) {
     logger.error(error.message, {
       service: "user",
@@ -125,63 +126,46 @@ const uploadToBlob = async (file) => {
         controller: "user",
         method: "uploadToBlob",
       });
-      return response(
-        res,
-        StatusCodes.BAD_REQUEST,
-        false,
-        null,
-        "Failed to upload file in blob storage!"
-      );
+      return null;
     }
-    return response(
-      res,
-      StatusCodes.OK,
-      true,
-      { blobUrl: BLOB_URL + blobName },
-      null
-    );
+    return BLOB_URL + blobName;
   } catch (error) {
     logger.error(error.message, {
       service: "user",
       controller: "user",
       method: "uploadToBlob",
     });
-    return response(
-      res,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      false,
-      {},
-      error.message
-    );
+    return null;
   }
 };
 
 const sendOTP = async (toEmail, otp, expires) => {
-  return await sendEmail({
-    from: GMAIL_USERNAME,
-    to: toEmail,
-    subject: `OTP for verification`,
-    html: `<div>
-        <div>
-        <p style="font-family: arial, sans-serif;">
-        Dear User,
-        </p>
-        <p style="font-family: arial, sans-serif;">
-        Here is your OTP: ${otp}.
-        </p>
-        <p style="font-family: arial, sans-serif;">
-        It will expire in ${expires}.
-        </p>
-        </div>
-        <div>
-        <p style="font-family: arial, sans-serif;">
-        Best Regards,
-        <br/>
-        Admin
-        </p>
-        </div>
-        </div>`,
-  });
+  let body = `<div>
+  <div>
+  <p style="font-family: arial, sans-serif;">
+  Dear User,
+  </p>
+  <p style="font-family: arial, sans-serif;">
+  Here is your OTP: ${otp}.
+  </p>
+  <p style="font-family: arial, sans-serif;">
+  It will expire in ${expires}.
+  </p>
+  </div>
+  <div>
+  <p style="font-family: arial, sans-serif;">
+  Best Regards,
+  <br/>
+  Admin
+  </p>
+  </div>
+  </div>`;
+  return await sendEmail(
+    toEmail,
+    "no-reply@ncc.se",
+    "OTP for verification",
+    body
+  );
 };
 
 const verifyOTP = async (req, res) => {

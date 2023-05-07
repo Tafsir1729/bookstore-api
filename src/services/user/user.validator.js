@@ -11,12 +11,8 @@ const validator = joi.object({
     .length(14)
     .pattern(/(^(\+8801|8801|01|008801))[1|3-9]{1}(\d){8}$/)
     .required(),
-  photo: joi
-    .object({
-      mimetype: joi.string().valid("image/jpeg", "image/png").required(),
-      size: joi.number().max(5242880).required(),
-    })
-    .required(),
+  mimetype: joi.string().valid("image/jpeg", "image/png").required(),
+  size: joi.number().max(5242880).required(),
   gender: joi.string().required(),
   role: joi.string().required(),
   active: joi.boolean().default(true),
@@ -28,7 +24,8 @@ const registerValidator = async (req, res, next) => {
     email: req.body.email,
     password: req.body.password,
     phone: req.body.phone,
-    photo: req.files,
+    mimetype: req.files?.photo?.mimetype,
+    size: req.files?.photo?.size,
     gender: req.body.gender,
     role: req.body.role,
     active: req.body.active,
