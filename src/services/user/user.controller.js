@@ -172,10 +172,10 @@ const verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
   try {
     const user = await User.findOne({ email: email });
-    if (user.opt === otp && user.otpExpiry >= new Date()) {
+    if (user.otp === otp && user.otpExpiry >= new Date()) {
       return response(
         res,
-        StatusCodes.Ok,
+        StatusCodes.OK,
         true,
         { user: user },
         "OTP verified successfully!"
