@@ -216,8 +216,13 @@ const verifyOTP = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    let msg = "Please provide email and password.";
-    return response(res, StatusCodes.BAD_REQUEST, false, {}, msg);
+    return response(
+      res,
+      StatusCodes.BAD_REQUEST,
+      false,
+      {},
+      "Please provide email and password"
+    );
   }
 
   try {
@@ -225,8 +230,7 @@ const login = async (req, res) => {
       email: email,
     });
     if (!user) {
-      let msg = "No user found!";
-      return response(res, StatusCodes.NOT_FOUND, false, {}, msg);
+      return response(res, StatusCodes.NOT_FOUND, false, {}, "No user found!");
     }
 
     const passwordMatched = await compare(password, user.password);
@@ -236,20 +240,35 @@ const login = async (req, res) => {
         if (token) {
           return response(res, StatusCodes.OK, true, { token: token }, null);
         }
-        let msg = "Could not generate token!";
         logger.error(`Could not generate token for user ${email}`, {
           service: "user",
           controller: "user",
           method: "login",
         });
-        return response(res, StatusCodes.BAD_REQUEST, false, {}, msg);
+        return response(
+          res,
+          StatusCodes.BAD_REQUEST,
+          false,
+          {},
+          "Could not generate token!"
+        );
       } else {
-        let msg = "User is not active!";
-        return response(res, StatusCodes.NOT_ACCEPTABLE, false, {}, msg);
+        return response(
+          res,
+          StatusCodes.NOT_ACCEPTABLE,
+          false,
+          {},
+          "User is not active!"
+        );
       }
     } else {
-      let msg = "Incorrect password!";
-      return response(res, StatusCodes.NOT_ACCEPTABLE, false, {}, msg);
+      return response(
+        res,
+        StatusCodes.NOT_ACCEPTABLE,
+        false,
+        {},
+        "Incorrect password!"
+      );
     }
   } catch (error) {
     logger.error(error.message, {
