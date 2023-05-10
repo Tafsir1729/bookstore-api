@@ -7,6 +7,7 @@ const { BLOB_URL, BLOB_CONTAINER_NAME, BLOB_CONNECTION_STRING } = process.env;
 const { v4: uuidv4 } = require("uuid");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { sendEmail } = require("../../utils/sendGrid");
+const { createToken } = require("../../utils/protected");
 
 const register = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ const register = async (req, res) => {
       photoUrl: blobResponse,
     });
     if (!newUser) {
-      logger.error(`Couldn't create user ${email}!`, {
+      logger.error(`Couldn't create user ${email}`, {
         service: "user",
         controller: "user",
         method: "register",
@@ -212,4 +213,58 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP };
+const login = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    let msg = "Please provide email and password.";
+    return response(res, StatusCodes.BAD_REQUEST, false, {}, msg);
+  }
+
+  try {
+    const user = await User.findOne({
+      email: email,
+    });
+    if (!user) {
+      let msg = "No user found!";
+      return response(res, StatusCodes.NOT_FOUND, false, {}, msg);
+    }
+
+    const passwordMatched = await compare(password, user.password);
+    if (passwordMatched) {
+      if (user.active) {
+        const token = await createToken(user);
+        if (token) {
+          return response(res, StatusCodes.OK, true, { token: token }, null);
+        }
+        let msg = "Could not generate token!";
+        logger.error(`Could not generate token for user ${email}`, {
+          service: "user",
+          controller: "user",
+          method: "login",
+        });
+        return response(res, StatusCodes.BAD_REQUEST, false, {}, msg);
+      } else {
+        let msg = "User is not active!";
+        return response(res, StatusCodes.NOT_ACCEPTABLE, false, {}, msg);
+      }
+    } else {
+      let msg = "Incorrect password!";
+      return response(res, StatusCodes.NOT_ACCEPTABLE, false, {}, msg);
+    }
+  } catch (error) {
+    logger.error(error.message, {
+      service: "user",
+      controller: "user",
+      method: "login",
+    });
+    return response(
+      res,
+      StatusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      {},
+      error.message
+    );
+  }
+};
+
+module.exports = { register, verifyOTP, login };
